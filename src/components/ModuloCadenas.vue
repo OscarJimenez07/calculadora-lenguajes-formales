@@ -1,104 +1,44 @@
 <template>
   <div>
     <div>
-      <h2>Operaciones con Cadenas</h2>      
+      <h2>Operaciones con Cadenas</h2>
       <div>
-        <button 
-          v-for="op in operaciones" 
-          :key="op.id"
-          @click="prepararOperacion(op.id)" 
-          :class="operacionActiva === op.id"
-        >
-          <div>{{ op.nombre }}</div>
-        </button>
-      </div>
-    </div>  
-
-    <hr>
-    <h3>Añadir Cadena</h3>
-    <div class="input-container">
-      <input 
-        v-model="valorCadena" 
-        type="text" 
-        placeholder="Cadena (ej: abc, xyz, 123)"
-        class="input-large"
-      />
-      <button @click="agregarCadena">Añadir Cadena</button>
-    </div>
-     
-    <hr>
-    <h3>Cadenas creadas</h3>
-    <div v-if="Object.keys(cadenas).length === 0">
-       No hay cadenas creadas. Crea una para comenzar.
-    </div>
-    <div class="cadenas-seleccion">
-      <div 
-        v-for="(cadena, nombre) in cadenas" 
-        :key="nombre" 
-        class="cadena-item"
-        :class="{ 'cadena-seleccionada': cadenasSeleccionadas.includes(nombre) }"
-        @click="toggleSeleccionCadena(nombre)"
-      >
-        <span>{{ nombre }}:</span> 
-        <span>"{{ cadena }}"</span>
-        <button @click.stop="eliminarCadena(nombre)">×</button>
+        <button @click="prepararOperacion('concatenacion')" :class="{ active: operacionActiva === 'concatenacion' }">Concatenación</button>
+        <button @click="prepararOperacion('potenciacion')" :class="{ active: operacionActiva === 'potenciacion' }">Potenciación</button>
+        <button @click="prepararOperacion('reflexion')" :class="{ active: operacionActiva === 'reflexion' }">Reflexión</button>
+        <button @click="prepararOperacion('longitud')" :class="{ active: operacionActiva === 'longitud' }">Longitud</button>
       </div>
     </div>
-  
+    <hr>
+    
     <div v-if="operacionActiva">
       <h3>{{ obtenerNombreOperacion(operacionActiva) }}</h3>
-      <div v-if="Object.keys(cadenas).length > 0">
-        <div v-if="operacionActiva === 'subcadena'">
-          <label>Subcadena a buscar</label>
-          <input 
-            v-model="subcadenaEntrada" 
-            type="text" 
-            placeholder="Subcadena a buscar" 
-            class="input-large"
-          />
-        </div>   
+      
+      <div class="input-container">
+        <label>Primera cadena:</label>
+        <input v-model="cadena1" type="text" placeholder="Ingrese la primera cadena"/>
         
-        <div v-if="operacionActiva === 'potencia'">
-          <label>Exponente</label>
-          <input 
-            v-model="potenciaEntrada" 
-            type="number" 
-            min="0"
-            placeholder="Exponente" 
-            class="input-large"
-          />
+        <div v-if="operacionActiva === 'concatenacion'">
+          <label>Segunda cadena:</label>
+          <input v-model="cadena2" type="text" placeholder="Ingrese la segunda cadena"/>
         </div>
         
-        <div v-if="operacionActiva === 'apendizar'">
-          <label>Símbolo a agregar</label>
-          <input 
-            v-model="apendizarEntrada" 
-            type="text" 
-            placeholder="Símbolo a agregar" 
-            class="input-large"
-          />
+        <div v-if="operacionActiva === 'potenciacion'">
+          <label>Exponente:</label>
+          <input v-model.number="exponente" type="number" min="0" placeholder="Ingrese un número entero no negativo"/>
         </div>
-
-        <button 
-          @click="ejecutarOperacion" 
-          :disabled="!(operacionActiva === 'concatenacion' || cadenasSeleccionadas.length > 0)"
-        >
+        
+        <button @click="ejecutarOperacion" :disabled="!puedeEjecutarOperacion()">
           Ejecutar Operación
         </button>
       </div>
-      <div v-else>
-        Primero debes añadir al menos una cadena para realizar operaciones.
-      </div>
     </div>
     
-    <!-- Resultado -->
-    <div v-if="resultado">
+    <div v-if="resultado !== null">
       <h3>Resultado:</h3>
-      <span v-if="Array.isArray(resultado)">{{ resultado.join(', ') }}</span>
-      <span v-else>{{ resultado }}</span>
+      <div>{{ resultado }}</div>
     </div>
     
-    <!-- Mensajes de error -->
     <div v-if="error" class="error-message">
       {{ error }}
     </div>
@@ -106,279 +46,118 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue';
+import { ref } from 'vue';
 
-// Definimos las cadenas de manera reactiva
-const cadenas = reactive<Record<string, string>>({});
+// Definición de tipos
+type OperacionesType = Record<string, string>;
 
-// Variables para añadir nuevas cadenas
-const valorCadena = ref('');
-const contadorCadenas = ref(1);
-
-// Cadenas seleccionadas
-const cadenasSeleccionadas = ref<string[]>([]);
-
-// Función para agregar una nueva cadena
-const agregarCadena = () => {
-  const valor = valorCadena.value.trim();
-
-  if (!valor) {
-    error.value = 'Error: Debes proporcionar un valor para la cadena.';
-    return;
-  }
-
-  const nombre = `Cadena ${contadorCadenas.value}`;
-  cadenas[nombre] = valor;
-  valorCadena.value = '';
-  contadorCadenas.value++;
-  error.value = '';
-};
-
-// Función para eliminar una cadena
-const eliminarCadena = (nombre: string) => {
-  delete cadenas[nombre];
-  const index = cadenasSeleccionadas.value.indexOf(nombre);
-  if (index > -1) {
-    cadenasSeleccionadas.value.splice(index, 1);
-  }
-};
-
-// Función para seleccionar/deseleccionar cadenas
-const toggleSeleccionCadena = (nombre: string) => {
-  const index = cadenasSeleccionadas.value.indexOf(nombre);
-  if (index > -1) {
-    cadenasSeleccionadas.value.splice(index, 1);
-  } else {
-    cadenasSeleccionadas.value.push(nombre);
-  }
-};
-
-// Definimos las operaciones disponibles
-const operaciones = [
-  { 
-    id: 'concatenacion', 
-    nombre: 'Concatenación', 
-  },
-  { 
-    id: 'longitud', 
-    nombre: 'Longitud', 
-  },
-  { 
-    id: 'subcadena', 
-    nombre: 'Búsqueda de Subcadena', 
-  },
-  { 
-    id: 'inverso', 
-    nombre: 'Inverso', 
-  },
-  { 
-    id: 'potencia', 
-    nombre: 'Potencia', 
-  },
-  { 
-    id: 'apendizar', 
-    nombre: 'Apendizar', 
-  }
-];
-
-// Obtener nombre de operación
-const obtenerNombreOperacion = (id: string): string => {
-  const nombres: Record<string, string> = {
-    'concatenacion': 'Concatenación',
-    'longitud': 'Longitud',
-    'subcadena': 'Búsqueda de Subcadena',
-    'inverso': 'Inverso',
-    'potencia': 'Potencia',
-    'apendizar': 'Apendizar'
-  };
-  return nombres[id] || id;
+// Constantes
+const NOMBRES_OPERACIONES: OperacionesType = {
+  'concatenacion': 'Concatenación',
+  'potenciacion': 'Potenciación',
+  'reflexion': 'Reflexión',
+  'longitud': 'Longitud'
 };
 
 // Variables reactivas
-const operacionActiva = ref('');
-const subcadenaEntrada = ref('');
-const potenciaEntrada = ref<number | null>(null);
-const apendizarEntrada = ref('');
-const resultado = ref<string | string[]>('');
+const operacionActiva = ref('concatenacion');
+const cadena1 = ref('');
+const cadena2 = ref('');
+const exponente = ref(0);
+const resultado = ref<string | number | null>(null);
 const error = ref('');
 
-// Prepare operation function
+// Utilidades
+const obtenerNombreOperacion = (id: string): string => NOMBRES_OPERACIONES[id] || '';
+
 const prepararOperacion = (operacionId: string) => {
   operacionActiva.value = operacionId;
-  cadenasSeleccionadas.value = [];
-  subcadenaEntrada.value = '';
-  potenciaEntrada.value = null;
-  apendizarEntrada.value = '';
-  resultado.value = '';
+  resultado.value = null;
   error.value = '';
 };
 
-// Seleccionar una operación por defecto al cargar la página
-onMounted(() => {
-  prepararOperacion('concatenacion');
-});
+const puedeEjecutarOperacion = () => {
+  if (cadena1.value.trim() === '') return false;
+  
+  if (operacionActiva.value === 'concatenacion' && cadena2.value.trim() === '') {
+    return false;
+  }
+  
+  if (operacionActiva.value === 'potenciacion' && (isNaN(exponente.value) || exponente.value < 0)) {
+    return false;
+  }
+  
+  return true;
+};
 
-// Execute operation function
-const ejecutarOperacion = () => {
-  // Reset previous results and errors
-  resultado.value = '';
-  error.value = '';
+// Implementación de las operaciones según la lógica de Python
+const operaciones = {
+  concatenacion: (cadena1: string, cadena2: string): string => {
+    if (cadena1 === 'λ') cadena1 = '';
+    if (cadena2 === 'λ') cadena2 = '';
     
-  // Para concatenación, necesitamos todos los conjuntos
-  const nombresCadenas = operacionActiva.value === 'concatenacion' 
-    ? Object.keys(cadenas) 
-    : cadenasSeleccionadas.value;
+    const resultado = cadena1 + cadena2;
+    return resultado === '' ? 'λ' : resultado;
+  },
   
-  // Validate input cadenas
-  const cadenasValidas = nombresCadenas.filter(nombre => cadenas.hasOwnProperty(nombre));
-  const cadenasInvalidas = nombresCadenas.filter(nombre => !cadenas.hasOwnProperty(nombre));
-  
-  if (cadenasInvalidas.length > 0) {
-    error.value = `Error: Las cadenas ${cadenasInvalidas.join(', ')} no son válidas.`;
-    return;
-  }
-  
-  // Validación de entrada específica para algunas operaciones
-  if (operacionActiva.value === 'subcadena' && !subcadenaEntrada.value) {
-    error.value = 'Error: Debes ingresar una subcadena para buscar.';
-    return;
-  }
-  
-  if (operacionActiva.value === 'potencia' && potenciaEntrada.value === null) {
-    error.value = 'Error: Debes ingresar un valor de exponente.';
-    return;
-  }
-  
-  if (operacionActiva.value === 'apendizar' && !apendizarEntrada.value) {
-    error.value = 'Error: Debes ingresar un símbolo para apendizar.';
-    return;
-  }
-  
-  // Execute the selected operation
-  switch (operacionActiva.value) {
-    case 'concatenacion':
-      resultado.value = calcularConcatenacion(cadenasValidas);
-      break;
-    case 'longitud':
-      resultado.value = calcularLongitud(cadenasValidas);
-      break;
-    case 'subcadena':
-      resultado.value = buscarSubcadena(cadenasValidas, subcadenaEntrada.value);
-      break;
-    case 'inverso':
-      resultado.value = calcularInverso(cadenasValidas);
-      break;
-    case 'potencia':
-      resultado.value = calcularPotencia(cadenasValidas, potenciaEntrada.value!);
-      break;
-    case 'apendizar':
-      resultado.value = calcularApendizar(cadenasValidas, apendizarEntrada.value);
-      break;
-  }
-};
-
-// Operation implementations
-const calcularConcatenacion = (nombresCadenas: string[]): string => {
-  let resultado = '';
-  nombresCadenas.forEach(nombre => {
-    resultado += cadenas[nombre];
-  });
-  return resultado;
-};
-
-const calcularLongitud = (nombresCadenas: string[]): string[] => {
-  return nombresCadenas.map(nombre => {
-    const cadena = cadenas[nombre];
-    return `${nombre}: ${cadena.length} caracteres`;
-  });
-};
-
-const buscarSubcadena = (nombresCadenas: string[], subcadena: string): string => {
-  const cadenasConcidencias = nombresCadenas.filter(nombre => 
-    cadenas[nombre].includes(subcadena)
-  );
-  
-  if (cadenasConcidencias.length > 0) {
-    return `La subcadena "${subcadena}" fue encontrada en: ${cadenasConcidencias.join(', ')}`;
-  } else {
-    return `La subcadena "${subcadena}" no fue encontrada en ninguna cadena seleccionada.`;
-  }
-};
-
-const calcularInverso = (nombresCadenas: string[]): string[] => {
-  return nombresCadenas.map(nombre => {
-    const cadena = cadenas[nombre];
-    const inverso = cadena.split('').reverse().join('');
-    return `${nombre} inverso: "${inverso}"`;
-  });
-};
-
-const calcularPotencia = (nombresCadenas: string[], exponente: number): string[] => {
-  return nombresCadenas.map(nombre => {
-    const cadena = cadenas[nombre];
+  potenciacion: (cadena: string, n: number): string => {
+    if (cadena === 'λ') cadena = '';
+    
+    if (n === 0) return 'λ';
+    
     let resultado = '';
-    
-    for (let i = 0; i < exponente; i++) {
+    for (let i = 0; i < n; i++) {
       resultado += cadena;
     }
     
-    return `${nombre}^${exponente}: "${resultado}"`;
-  });
+    return resultado === '' ? 'λ' : resultado;
+  },
+  
+  reflexion: (cadena: string): string => {
+    if (cadena === 'λ') return 'λ';
+    
+    return cadena.split('').reverse().join('');
+  },
+  
+  longitud: (cadena: string): number => {
+    if (cadena === 'λ') return 0;
+    
+    return cadena.length;
+  }
 };
 
-const calcularApendizar = (nombresCadenas: string[], simbolo: string): string[] => {
-  return nombresCadenas.map(nombre => {
-    const cadena = cadenas[nombre];
-    return `${nombre} + "${simbolo}": "${cadena + simbolo}"`;
-  });
+// Ejecución de la operación
+const ejecutarOperacion = () => {
+  resultado.value = null;
+  error.value = '';
+  
+  try {
+    switch (operacionActiva.value) {
+      case 'concatenacion':
+        resultado.value = operaciones.concatenacion(cadena1.value, cadena2.value);
+        break;
+        
+      case 'potenciacion':
+        if (isNaN(exponente.value) || exponente.value < 0) {
+          error.value = 'Error: El exponente debe ser un número entero no negativo.';
+          return;
+        }
+        resultado.value = operaciones.potenciacion(cadena1.value, exponente.value);
+        break;
+        
+      case 'reflexion':
+        resultado.value = operaciones.reflexion(cadena1.value);
+        break;
+        
+      case 'longitud':
+        resultado.value = operaciones.longitud(cadena1.value);
+        break;
+        
+      default:
+        error.value = 'Error: Operación no reconocida.';
+    }
+  } catch (e) {
+    error.value = `Error al ejecutar la operación: ${e}`;
+  }
 };
 </script>
-
-<style scoped>
-.input-container {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 15px;
-}
-
-.input-large {
-  flex-grow: 1;
-  padding: 8px;
-  font-size: 16px;
-}
-
-.cadenas-seleccion {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.cadena-item {
-  margin-bottom: 10px;
-  padding: 8px;
-  border: 1px solid #ccc;
-  cursor: pointer;
-  transition: background-color 0.3s;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.cadena-item:hover {
-  background-color: gray;
-}
-
-.cadena-seleccionada {
-  background-color: gray;
-  border-color: blue;
-}
-
-.error-message {
-  color: red;
-  margin-top: 10px;
-}
-
-button {
-  padding: 8px 15px;
-}
-</style>

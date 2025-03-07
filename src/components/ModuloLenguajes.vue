@@ -7,7 +7,7 @@
         v-for="(op, index) in operations" 
         :key="index" 
         @click="prepararOperacion(op.id)"
-        :class="operacionActiva === op.id"
+        :class="{ active: operacionActiva === op.id }"
       >
         <div>{{ op.name }}</div>
       </button>
@@ -18,43 +18,63 @@
       <h3>{{ obtenerNombreOperacion(operacionActiva) }}</h3>
       
       <div class="input-container">
-        <input 
-          v-if="['concatenation', 'union', 'intercession', 'subtraction'].includes(operacionActiva)"
-          v-model="conjunto1" 
-          type="text" 
-          placeholder="Símbolos del primer conjunto separados por coma (ej: a, b, c)"
-          class="input-large"
-        />
-        <input 
-          v-if="['concatenation', 'union', 'intercession', 'subtraction'].includes(operacionActiva)"
-          v-model="conjunto2" 
-          type="text" 
-          placeholder="Símbolos del segundo conjunto separados por coma (ej: x, y, z)"
-          class="input-large"
-        />
+        <!-- Para operaciones que requieren dos conjuntos -->
+        <div v-if="['concatenation', 'union', 'intercession', 'subtraction'].includes(operacionActiva)">
+          <input 
+            v-model="conjunto1" 
+            type="text"
+            placeholder="Lenguaje 1 (separado por comas)"
+            class="input-large"
+          />
+          <input 
+            v-model="conjunto2" 
+            type="text" 
+            placeholder="Lenguaje 2 (separado por comas)"
+            class="input-large"
+          />
+        </div>
         
-        <input 
-          v-if="['empowerment', 'reflection'].includes(operacionActiva)"
-          v-model="conjunto1" 
-          type="text" 
-          placeholder="Símbolos del conjunto separados por coma (ej: a, b, c)"
-          class="input-large"
-        />
+        <!-- Para operación de potenciamiento -->
+        <div v-if="operacionActiva === 'empowerment'">
+          <input 
+            v-model="conjunto1" 
+            type="text"
+            placeholder="Lenguaje (separado por comas)"
+            class="input-large"
+          />
+          <input 
+            v-model="potencia" 
+            type="number" 
+            placeholder="Exponente"
+            class="input-large"
+          />
+        </div>
         
-        <input 
-          v-if="['closureKlenne', 'closurePositive'].includes(operacionActiva)"
-          v-model="conjunto1" 
-          type="text" 
-          placeholder="Símbolos del conjunto separados por coma (ej: a, b, c)"
-          class="input-large"
-        />
-        <input 
-          v-if="['closureKlenne', 'closurePositive'].includes(operacionActiva)"
-          v-model="profundidad" 
-          type="number" 
-          placeholder="Profundidad"
-          class="input-large"
-        />
+        <!-- Para reflexión, que solo necesita un conjunto -->
+        <div v-if="operacionActiva === 'reflection'">
+          <input 
+            v-model="conjunto1" 
+            type="text"
+            placeholder="Lenguaje (separado por comas)"
+            class="input-large"
+          />
+        </div>
+        
+        <!-- Para operaciones de cierre -->
+        <div v-if="['closureKlenne', 'closurePositive'].includes(operacionActiva)">
+          <input 
+            v-model="conjunto1" 
+            type="text"
+            placeholder="Lenguaje (separado por comas)"
+            class="input-large"
+          />
+          <input 
+            v-model="profundidad" 
+            type="number" 
+            placeholder="Profundidad"
+            class="input-large"
+          />
+        </div>
         
         <button 
           @click="ejecutarOperacion" 
@@ -68,7 +88,7 @@
     <!-- Resultado -->
     <div v-if="resultado">
       <h3>Resultado:</h3>
-      <span>{{ resultado }}</span>
+      <pre>{{ resultado }}</pre>
     </div>
     
     <!-- Mensajes de error -->
@@ -97,6 +117,7 @@ const operations = [
 const operacionActiva = ref('');
 const conjunto1 = ref('');
 const conjunto2 = ref('');
+const potencia = ref(2);
 const profundidad = ref(2);
 const resultado = ref('');
 const error = ref('');
@@ -106,6 +127,7 @@ const prepararOperacion = (operacionId: string) => {
   operacionActiva.value = operacionId;
   conjunto1.value = '';
   conjunto2.value = '';
+  potencia.value = 2;
   profundidad.value = 2;
   resultado.value = '';
   error.value = '';
@@ -117,12 +139,19 @@ const obtenerNombreOperacion = (id: string): string => {
   return operacion ? operacion.name : id;
 };
 
+// Procesar conjunto de entrada
+const procesarConjunto = (conjuntoStr: string): Set<string> => {
+  return new Set(
+    conjuntoStr
+      .split(',')
+      .map(s => s.trim())
+      .filter(s => s)
+  );
+};
+
 // Validar entrada antes de ejecutar operación
 const validarEntrada = (): boolean => {
   if (!operacionActiva.value) return false;
-  
-  const procesarConjunto = (conjuntoStr: string) => 
-    conjuntoStr.split(',').map(s => s.trim()).filter(s => s);
   
   const conjuntoA = procesarConjunto(conjunto1.value);
   
@@ -132,16 +161,154 @@ const validarEntrada = (): boolean => {
     case 'intercession':
     case 'subtraction':
       const conjuntoB = procesarConjunto(conjunto2.value);
-      return conjuntoA.length > 0 && conjuntoB.length > 0;
+      return conjuntoA.size > 0 && conjuntoB.size > 0;
     case 'empowerment':
+      return conjuntoA.size > 0 && potencia.value >= 0;
     case 'reflection':
+      return conjuntoA.size > 0;
     case 'closureKlenne':
     case 'closurePositive':
-      return conjuntoA.length > 0;
+      return conjuntoA.size > 0 && profundidad.value > 0;
     default:
       return false;
   }
 };
+
+// Clase de operaciones de lenguaje actualizada
+class OperacionesDeLenguaje {
+  private landa = "λ";
+
+  concatenacion(L1: Set<string>, L2: Set<string>): string {
+    // Si ambos conjuntos son lambda o están vacíos, devolver solo {λ}
+    if ((L1.size === 0 || (L1.size === 1 && L1.has(this.landa))) && 
+        (L2.size === 0 || (L2.size === 1 && L2.has(this.landa)))) {
+      return `La concatenación de los conjuntos es {${this.landa}}`;
+    }
+    
+    // Si uno de los conjuntos está vacío o es {λ}, devolver el otro conjunto
+    if (L1.size === 0 || (L1.size === 1 && L1.has(this.landa))) {
+      return `La concatenación de los conjuntos es {${Array.from(L2).join(', ')}}`;
+    }
+    
+    if (L2.size === 0 || (L2.size === 1 && L2.has(this.landa))) {
+      return `La concatenación de los conjuntos es {${Array.from(L1).join(', ')}}`;
+    }
+    
+    // Caso general: concatenar todas las combinaciones
+    const resultado = new Set<string>();
+    L1.forEach(a => {
+      L2.forEach(b => {
+        resultado.add(a + b);
+      });
+    });
+    
+    return `La concatenación de los conjuntos es {${Array.from(resultado).sort().join(', ')}}`;
+  }
+
+  potenciamiento(L: Set<string>, n: number): string {
+    // Si L es el conjunto vacío o solo contiene lambda (vacío)
+    if (L.size === 0 || (L.size === 1 && L.has(this.landa))) {
+      if (n === 0) {
+        return `El potenciamiento del lenguaje es {${this.landa}}`; // Cualquier cosa elevada a 0 es {λ}
+      }
+      return `El potenciamiento del lenguaje es {${this.landa}}`; // λ elevado a cualquier n > 0 devuelve "λ"
+    }
+    
+    // Caso estándar para n == 0
+    if (n === 0) {
+      return `El potenciamiento del lenguaje es {${this.landa}}`;
+    }
+    
+    // Lógica de concatenación para potencias mayores a 0
+    let resultado = new Set<string>(L);
+    for (let i = 1; i < n; i++) {
+      const nuevoResultado = new Set<string>();
+      resultado.forEach(a => {
+        L.forEach(b => {
+          nuevoResultado.add(a + b);
+        });
+      });
+      resultado = nuevoResultado;
+    }
+    
+    return `El potenciamiento del lenguaje es {${Array.from(resultado).sort().join(', ')}}`;
+  }
+
+  reflexion(L: Set<string>): string {
+    const resultado = new Set<string>();
+    L.forEach(palabra => {
+      resultado.add(palabra.split('').reverse().join(''));
+    });
+    
+    return `La reflexión de los elementos es {${Array.from(resultado).sort().join(', ')}}`;
+  }
+
+  union(L1: Set<string>, L2: Set<string>): string {
+    const resultado = new Set<string>([...L1, ...L2]);
+    return `La unión de los conjuntos es {${Array.from(resultado).sort().join(', ')}}`;
+  }
+
+  interseccion(L1: Set<string>, L2: Set<string>): string {
+    const resultado = new Set<string>();
+    L1.forEach(elem => {
+      if (L2.has(elem)) {
+        resultado.add(elem);
+      }
+    });
+    
+    return `La intersección de los conjuntos es {${Array.from(resultado).sort().join(', ')}}`;
+  }
+
+  sustraccion(L1: Set<string>, L2: Set<string>): string {
+    const resultado = new Set<string>();
+    L1.forEach(elem => {
+      if (!L2.has(elem)) {
+        resultado.add(elem);
+      }
+    });
+    
+    return `La sustracción de los conjuntos es {${Array.from(resultado).sort().join(', ')}}`;
+  }
+
+  cierreKleene(L: Set<string>, maxDepth: number): string {
+    let resultado = new Set<string>([this.landa]);
+    let paso = new Set<string>(L);
+    
+    for (let i = 1; i <= maxDepth; i++) {
+      resultado = new Set([...resultado, ...paso]);
+      
+      const nuevoPaso = new Set<string>();
+      paso.forEach(a => {
+        L.forEach(b => {
+          nuevoPaso.add(a + b);
+        });
+      });
+      paso = nuevoPaso;
+    }
+    
+    return `El cierre de Kleene es {${this.landa}, ${Array.from(resultado).filter(x => x !== this.landa).sort().join(', ')}, ...}`;
+  }
+
+  cierrePositivo(L: Set<string>, maxDepth: number): string {
+    let resultado = new Set<string>(L);
+    let paso = new Set<string>(L);
+    
+    for (let i = 2; i <= maxDepth; i++) {
+      const nuevoPaso = new Set<string>();
+      paso.forEach(a => {
+        L.forEach(b => {
+          nuevoPaso.add(a + b);
+        });
+      });
+      paso = nuevoPaso;
+      resultado = new Set([...resultado, ...paso]);
+    }
+    
+    return `El cierre positivo es {${Array.from(resultado).sort().join(', ')}, ...}`;
+  }
+}
+
+const operacionesDeLenguaje = new OperacionesDeLenguaje();
 
 // Ejecutar operación
 const ejecutarOperacion = () => {
@@ -149,9 +316,6 @@ const ejecutarOperacion = () => {
     error.value = 'Por favor, complete los campos requeridos.';
     return;
   }
-  
-  const procesarConjunto = (conjuntoStr: string) => 
-    conjuntoStr.split(',').map(s => s.trim()).filter(s => s);
   
   const conjuntoA = procesarConjunto(conjunto1.value);
   const conjuntoB = procesarConjunto(conjunto2.value);
@@ -162,7 +326,7 @@ const ejecutarOperacion = () => {
         resultado.value = operacionesDeLenguaje.concatenacion(conjuntoA, conjuntoB);
         break;
       case 'empowerment':
-        resultado.value = operacionesDeLenguaje.potenciamiento(conjuntoA);
+        resultado.value = operacionesDeLenguaje.potenciamiento(conjuntoA, potencia.value);
         break;
       case 'reflection':
         resultado.value = operacionesDeLenguaje.reflexion(conjuntoA);
@@ -184,89 +348,12 @@ const ejecutarOperacion = () => {
         break;
     }
   } catch (err) {
-    error.value = `Error al ejecutar la operación: ${err instanceof Error ? err.message : err}`;
+    error.value = `Error al ejecutar la operación: ${err instanceof Error ? err.message : String(err)}`;
   }
 };
-
-// Clase de operaciones de lenguaje
-class OperacionesDeLenguaje {
-  concatenacion(set1: string[], set2: string[]): string {
-    const set3 = set1.flatMap(x => set2.map(y => x + y));
-    return `La concatenación de los conjuntos es {${['g', ...set3].join(', ')}}`;
-  }
-
-  potenciamiento(set1: string[]): string {
-    if (set1.length === 0) return "[g]";
-    const newSet = set1.flatMap(x => set1.map(y => x + y));
-    return `El potenciamiento del lenguaje es {${['g', ...newSet].join(', ')}}`;
-  }
-
-  reflexion(set1: string[]): string {
-    const set2 = ['g', ...set1.map(x => x.split('').reverse().join(''))];
-    return `La reflexión de los elementos es {${set2.join(', ')}}`;
-  }
-
-  union(set1: string[], set2: string[]): string {
-    const set3 = Array.from(new Set(['g', ...set1, ...set2]));
-    return `La unión de los conjuntos es {${set3.join(', ')}}`;
-  }
-
-  interseccion(set1: string[], set2: string[]): string {
-    const set3 = set1.filter(x => set2.includes(x));
-    return `La intersección de los conjuntos es {${['g', ...set3].join(', ')}}`;
-  }
-
-  sustraccion(set1: string[], set2: string[]): string {
-    const set3 = set1.filter(x => !set2.includes(x));
-    return `La sustracción de los conjuntos es {${['g', ...set3].join(', ')}}`;
-  }
-
-  cierreKleene(set: string[], maxDepth: number): string {
-    let result = [''];
-    for (let power = 1; power <= maxDepth; power++) {
-      const newWords = result.flatMap(word => 
-        set.map(symbol => word + symbol)
-      );
-      result = [...result, ...newWords];
-    }
-    return `El cierre de Kleene es {${result.join(', ')}}`;
-  }
-
-  cierrePositivo(set: string[], maxDepth: number): string {
-    let result = [...set];
-    for (let power = 2; power <= maxDepth; power++) {
-      const newWords = result.flatMap(word => 
-        set.map(symbol => word + symbol)
-      );
-      result = [...result, ...newWords];
-    }
-    return `El cierre positivo es {${result.join(', ')}}`;
-  }
-}
-
-const operacionesDeLenguaje = new OperacionesDeLenguaje();
 
 // Seleccionar una operación por defecto al cargar la página
 onMounted(() => {
   prepararOperacion('concatenation');
 });
 </script>
-
-<style>
-
-
-.input-large {
-  flex-grow: 1;
-  padding: 8px;
-  font-size: 16px;
-}
-
-.error-message {
-  color: red;
-  margin-top: 10px;
-}
-
-button {
-  padding: 8px 15px;
-}
-</style>
