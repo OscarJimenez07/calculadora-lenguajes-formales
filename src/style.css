@@ -31,9 +31,23 @@ button:focus-visible {
 
 .input-container {
   display: flex;
+  align-items: center;
   gap: 10px;
-  margin-bottom: 15px;
+  flex-wrap: wrap; /* Permite que se acomoden mejor en pantallas pequeñas */
 }
+
+.input-container label {
+  white-space: nowrap; /* Evita que las etiquetas se partan en varias líneas */
+}
+
+.input-container input {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  width: auto;
+  min-width: 200px; /* Evita que sean demasiado pequeños */
+}
+
 
 .input-large {
   flex-grow: 1;
@@ -70,12 +84,6 @@ button:focus-visible {
 .error-message {
   color: red;
   margin-top: 10px;
-}
-
-.input-container {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 15px;
 }
 
 .cadenas-seleccion {

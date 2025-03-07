@@ -3,71 +3,59 @@
     <div>
       <h2>Operaciones con Alfabetos</h2>      
       <div>
-        <button @click="prepararOperacion('pertenencia')" :class="operacionActiva === 'pertenencia'"><div>Pertenencia</div></button>
-        <button @click="prepararOperacion('union')" :class="operacionActiva === 'union'"><div>Unión</div></button>
-        <button @click="prepararOperacion('interseccion')" :class="operacionActiva === 'interseccion'"><div>Intersección</div></button>
-        <button @click="prepararOperacion('complemento')" :class="operacionActiva === 'complemento'"><div>Complemento</div></button>
-        <button @click="prepararOperacion('diferencia_absoluta')" :class="operacionActiva === 'diferencia_absoluta'"><div>Diferencia Absoluta</div></button>
-        <button @click="prepararOperacion('diferencia_simetrica')" :class="operacionActiva === 'diferencia_simetrica'"><div>Diferencia Simétrica</div></button>
+        <button @click="prepararOperacion('pertenencia')" :class="{ active: operacionActiva === 'pertenencia' }">Pertenencia</button>
+        <button @click="prepararOperacion('union')" :class="{ active: operacionActiva === 'union' }">Unión</button>
+        <button @click="prepararOperacion('interseccion')" :class="{ active: operacionActiva === 'interseccion' }">Intersección</button>
+        <button @click="prepararOperacion('complemento')" :class="{ active: operacionActiva === 'complemento' }">Complemento</button>
+        <button @click="prepararOperacion('diferencia_absoluta')" :class="{ active: operacionActiva === 'diferencia_absoluta' }">Diferencia Absoluta</button>
+        <button @click="prepararOperacion('diferencia_simetrica')" :class="{ active: operacionActiva === 'diferencia_simetrica' }">Diferencia Simétrica</button>
       </div>
     </div> 
   <hr>
-    <h3>Añadir alfabeto</h3>
+    <h3>Conjunto A</h3>
     <div class="input-container">
-      <input v-model="nuevoAlfabetoSimbolos" type="text" placeholder="Símbolos separados por espacio (ej: a b c)"/>
-      
-      <button @click="agregarAlfabeto">Añadir Alfabeto</button>
+      <input v-model="conjuntoAInput" type="text" placeholder="Símbolos separados por coma (ej: a,b,c)"/>
+      <button @click="actualizarConjuntoA">Actualizar A</button>
     </div>  
-  <hr>
-    <h3>Alfabetos creados</h3>
-    <div v-if="Object.keys(alfabetos).length === 0">
-       No hay alfabetos creados. Crea uno para comenzar.
+  
+    <h3>Conjunto B</h3>
+    <div class="input-container">
+      <input v-model="conjuntoBInput" type="text" placeholder="Símbolos separados por coma (ej: a,b,c)"/>
+      <button @click="actualizarConjuntoB">Actualizar B</button>
     </div>
-
-    <div class="alfabetos-seleccion">
-      <div 
-        v-for="(alfabeto, nombre) in alfabetos" :key="nombre" class="alfabeto-item"
-        :class="{ 'alfabeto-seleccionado': conjuntosSeleccionados.includes(nombre) }"
-        @click="ConjuntoSeleccionado(nombre)">
-        <span>{{ nombre }}:</span> <span>{{ alfabeto.join(', ') }}</span>
-        <button @click.stop="eliminarAlfabeto(nombre)">×</button>
+  
+    <h3>Conjuntos:</h3>
+    <div class="conjuntos-display">
+      <div class="conjunto-item">
+        <span>Conjunto A:</span> <span>{{ mostrarConjunto(conjuntoA) }}</span>
+      </div>
+      <div class="conjunto-item">
+        <span>Conjunto B:</span> <span>{{ mostrarConjunto(conjuntoB) }}</span>
       </div>
     </div>
   
     <div v-if="operacionActiva">
       <h3>{{ obtenerNombreOperacion(operacionActiva) }}</h3>
-      <div v-if="Object.keys(alfabetos).length > 0" class="input-container">
-
-        <div v-if="operacionActiva === 'complemento'">
-          <label>Conjunto Universo: </label>
-          <select v-model="universoSeleccionado">
-            <option v-for="(_, nombre) in alfabetos" :key="nombre" :value="nombre">{{ nombre }}</option>
-          </select>
-        </div>
-
-        <button @click="ejecutarOperacion" :disabled="!puedeEjecutarOperacion">
+      <div class="input-container">
+        <button @click="ejecutarOperacion">
           Ejecutar Operación
         </button>
-      </div>
-
-      <div v-else>
-        Primero debes añadir al menos un alfabeto para realizar operaciones.
       </div>
     </div>
 
     <!-- Resultado -->
-    <div v-if="resultadoA || resultadoB">
+    <div v-if="resultadoA.length > 0 || resultadoB.length > 0">
       <h3>Resultado:</h3>
       <div v-if="operacionActiva === 'pertenencia'">
-        <div>Elementos que pertenecen: {{ resultadoA.join(', ') }}</div>
-        <div>Elementos que no pertenecen: {{ resultadoB.join(', ') }}</div>
+        <div>Elementos que pertenecen: {{ mostrarConjunto(resultadoA) }}</div>
+        <div>Elementos que no pertenecen: {{ mostrarConjunto(resultadoB) }}</div>
       </div>
       <div v-else-if="operacionActiva === 'diferencia_absoluta'">
-        <div>Diferencia Absoluta A-B: {{ resultadoA.join(', ') }}</div>
-        <div>Diferencia Absoluta B-A: {{ resultadoB.join(', ') }}</div>
+        <div>Diferencia Absoluta A-B: {{ mostrarConjunto(resultadoA) }}</div>
+        <div>Diferencia Absoluta B-A: {{ mostrarConjunto(resultadoB) }}</div>
       </div>
       <div v-else>
-        <div>{{ Array.isArray(resultadoA) ? resultadoA.join(', ') : resultadoA }}</div>
+        <div>{{ mostrarConjunto(resultadoA) }}</div>
       </div>
     </div>
     
@@ -78,15 +66,11 @@
   </div>
 </template>
 
-<script setup lang="ts">
-import { ref, reactive, computed } from 'vue';
-
-// Definición de Tipos
-type AlfabetosType = Record<string, string[]>;
-type OperacionesType = Record<string, string>;
+<script setup>
+import { ref } from 'vue';
 
 // Constantes
-const NOMBRES_OPERACIONES: OperacionesType = {
+const nombresOperaciones = {
   'pertenencia': 'Pertenencia',
   'union': 'Unión',
   'interseccion': 'Intersección',
@@ -95,96 +79,60 @@ const NOMBRES_OPERACIONES: OperacionesType = {
   'diferencia_absoluta': 'Diferencia Absoluta'
 };
 
-// Variables para añadir nuevos alfabetos
-const nuevoAlfabetoSimbolos = ref('');
-const alfabetos = reactive<AlfabetosType>({});
-const contadorConjuntos = ref(1);
-const conjuntosSeleccionados = ref<string[]>([]);
-const universoSeleccionado = ref('');
+// Variables para los conjuntos A y B
+const conjuntoAInput = ref('');
+const conjuntoBInput = ref('');
+const conjuntoA = ref(new Set(['λ']));
+const conjuntoB = ref(new Set(['λ']));
 
 // Variables reactivas para operaciones
 const operacionActiva = ref('pertenencia');
-const resultadoA = ref<string[]>([]);
-const resultadoB = ref<string[]>([]);
+const resultadoA = ref([]);
+const resultadoB = ref([]);
 const error = ref('');
 
-// Computed properties
-const puedeEjecutarOperacion = computed(() => {
-  if (operacionActiva.value === 'complemento') {
-    return universoSeleccionado.value !== '' && conjuntosSeleccionados.value.length === 1;
-  } else {
-    return conjuntosSeleccionados.value.length > 0;
-  }
-});
-
-// Funciones de Gestión de Alfabetos
-const ConjuntoSeleccionado = (nombre: string) => {
-  const index = conjuntosSeleccionados.value.indexOf(nombre);
-  
-  if (index > -1) {
-    conjuntosSeleccionados.value.splice(index, 1);
-  } else {
-    // Si la operación solo necesita 2 conjuntos, limitar a 2 selecciones
-    if ((operacionActiva.value === 'pertenencia' || 
-         operacionActiva.value === 'diferencia_absoluta') && 
-        conjuntosSeleccionados.value.length >= 2) {
-      conjuntosSeleccionados.value = [];
-    }
+// Funciones para gestionar los conjuntos
+const actualizarConjuntoA = () => {
+  const simbolos = conjuntoAInput.value.trim() ? 
+    Array.from(new Set(
+      conjuntoAInput.value
+        .trim()
+        .split(',')
+        .map(s => s.trim())
+        .filter(s => s !== '')
+    )) : ['λ'];
     
-    // Para complemento, solo permitir seleccionar uno
-    if (operacionActiva.value === 'complemento' && conjuntosSeleccionados.value.length >= 1) {
-      conjuntosSeleccionados.value = [];
-    }
-    
-    conjuntosSeleccionados.value.push(nombre);
-  }
+  conjuntoA.value = new Set(simbolos);
+  resultadoA.value = [];
+  resultadoB.value = [];
 };
 
-const agregarAlfabeto = () => {
-  let simbolosTexto = nuevoAlfabetoSimbolos.value.trim();
-  const nombre = `Conjunto ${contadorConjuntos.value}`;
-
-  // Manejar caso de conjunto vacío
-  if (!simbolosTexto) {
-    alfabetos[nombre] = ["λ"]; // Asignar 'λ' si no hay entrada
-  } else {
-    // Dividir por espacios como en Python
-    const simbolos = Array.from(
-      new Set(
-        simbolosTexto
-          .split(/\s+/)
-          .map(s => s.trim())
-          .filter(s => s !== '')
-      )
-    );
+const actualizarConjuntoB = () => {
+  const simbolos = conjuntoBInput.value.trim() ? 
+    Array.from(new Set(
+      conjuntoBInput.value
+        .trim()
+        .split(',')
+        .map(s => s.trim())
+        .filter(s => s !== '')
+    )) : ['λ'];
     
-    alfabetos[nombre] = simbolos.length ? simbolos : ["λ"];
-  }
-
-  nuevoAlfabetoSimbolos.value = '';
-  error.value = '';
-  contadorConjuntos.value++;
+  conjuntoB.value = new Set(simbolos);
+  resultadoA.value = [];
+  resultadoB.value = [];
 };
 
-const eliminarAlfabeto = (nombre: string) => {
-  delete alfabetos[nombre];
-  const index = conjuntosSeleccionados.value.indexOf(nombre);
-  if (index > -1) {
-    conjuntosSeleccionados.value.splice(index, 1);
-  }
-  
-  if (universoSeleccionado.value === nombre) {
-    universoSeleccionado.value = '';
-  }
+// Utilidad para mostrar conjuntos
+const mostrarConjunto = (conjunto) => {
+  const elementos = Array.isArray(conjunto) ? conjunto : Array.from(conjunto);
+  return elementos.length === 0 ? 'λ' : elementos.join(', ');
 };
 
 // Funciones de Utilidad
-const obtenerNombreOperacion = (id: string): string => NOMBRES_OPERACIONES[id];
+const obtenerNombreOperacion = (id) => nombresOperaciones[id] || id;
 
-const prepararOperacion = (operacionId: string) => {
+const prepararOperacion = (operacionId) => {
   operacionActiva.value = operacionId;
-  conjuntosSeleccionados.value = [];
-  universoSeleccionado.value = '';
   resultadoA.value = [];
   resultadoB.value = [];
   error.value = '';
@@ -199,124 +147,86 @@ const ejecutarOperacion = () => {
   try {
     switch (operacionActiva.value) {
       case 'pertenencia':
-        if (conjuntosSeleccionados.value.length < 2) {
-          error.value = "Se necesitan dos conjuntos para la operación de pertenencia.";
-          return;
-        }
-        
-        const [conjA, conjB] = conjuntosSeleccionados.value;
-        const conjuntoA = new Set(alfabetos[conjA]);
-        const conjuntoB = new Set(alfabetos[conjB]);
-        
         // Calcular elementos que pertenecen (intersección)
-        const pertenecen = [...conjuntoB].filter(elem => conjuntoA.has(elem));
+        const pertenecen = Array.from(conjuntoB.value).filter(elem => 
+          elem !== 'λ' && conjuntoA.value.has(elem)
+        );
         
         // Calcular elementos que no pertenecen (diferencia)
-        const noPertenecen = [...conjuntoB].filter(elem => !conjuntoA.has(elem));
+        const noPertenecen = Array.from(conjuntoB.value).filter(elem => 
+          elem !== 'λ' && !conjuntoA.value.has(elem)
+        );
         
-        resultadoA.value = pertenecen.length ? pertenecen.sort() : ["λ"];
-        resultadoB.value = noPertenecen.length ? noPertenecen.sort() : ["λ"];
+        resultadoA.value = pertenecen.length ? pertenecen.sort() : ['λ'];
+        resultadoB.value = noPertenecen.length ? noPertenecen.sort() : ['λ'];
         break;
         
       case 'union':
-        if (conjuntosSeleccionados.value.length < 2) {
-          error.value = "Se necesitan al menos dos conjuntos para la unión.";
-          return;
-        }
-        
-        const union = new Set<string>();
-        conjuntosSeleccionados.value.forEach(nombre => {
-          alfabetos[nombre].forEach(simbolo => {
-            if (simbolo !== "λ") union.add(simbolo);
-          });
+        const union = new Set();
+        conjuntoA.value.forEach(simbolo => {
+          if (simbolo !== 'λ') union.add(simbolo);
+        });
+        conjuntoB.value.forEach(simbolo => {
+          if (simbolo !== 'λ') union.add(simbolo);
         });
         
-        resultadoA.value = union.size ? [...union].sort() : ["λ"];
+        resultadoA.value = union.size ? Array.from(union).sort() : ['λ'];
         break;
         
       case 'interseccion':
-        if (conjuntosSeleccionados.value.length < 2) {
-          error.value = "Se necesitan al menos dos conjuntos para la intersección.";
-          return;
-        }
+        const conjA_elementos = Array.from(conjuntoA.value).filter(s => s !== 'λ');
+        const conjB_elementos = Array.from(conjuntoB.value).filter(s => s !== 'λ');
         
-        let interseccion: string[] = [];
-        const primerConjunto = alfabetos[conjuntosSeleccionados.value[0]].filter(s => s !== "λ");
+        const interseccion = conjA_elementos.filter(simbolo => 
+          conjB_elementos.includes(simbolo)
+        );
         
-        if (primerConjunto.length) {
-          interseccion = [...primerConjunto];
-          
-          for (let i = 1; i < conjuntosSeleccionados.value.length; i++) {
-            const conjuntoActual = alfabetos[conjuntosSeleccionados.value[i]].filter(s => s !== "λ");
-            interseccion = interseccion.filter(simbolo => conjuntoActual.includes(simbolo));
-          }
-        }
-        
-        resultadoA.value = interseccion.length ? interseccion.sort() : ["λ"];
+        resultadoA.value = interseccion.length ? interseccion.sort() : ['λ'];
         break;
         
       case 'complemento':
-        if (conjuntosSeleccionados.value.length !== 1 || !universoSeleccionado.value) {
-          error.value = "Para el complemento, se necesita un conjunto y el universo.";
-          return;
-        }
+        // En este caso, B es el universo
+        const conjunto = new Set(Array.from(conjuntoA.value).filter(s => s !== 'λ'));
+        const universo = new Set(Array.from(conjuntoB.value).filter(s => s !== 'λ'));
         
-        const conjunto = new Set(alfabetos[conjuntosSeleccionados.value[0]].filter(s => s !== "λ"));
-        const universo = new Set(alfabetos[universoSeleccionado.value].filter(s => s !== "λ"));
-        
-        const complemento = [...universo].filter(simbolo => !conjunto.has(simbolo));
-        resultadoA.value = complemento.length ? complemento.sort() : ["λ"];
+        const complemento = Array.from(universo).filter(simbolo => !conjunto.has(simbolo));
+        resultadoA.value = complemento.length ? complemento.sort() : ['λ'];
         break;
         
       case 'diferencia_absoluta':
-        if (conjuntosSeleccionados.value.length < 2) {
-          error.value = "Se necesitan dos conjuntos para la diferencia absoluta.";
-          return;
-        }
-        
-        const [conjuntoNombreA, conjuntoNombreB] = conjuntosSeleccionados.value;
-        const conjA_elementos = alfabetos[conjuntoNombreA].filter(s => s !== "λ");
-        const conjB_elementos = alfabetos[conjuntoNombreB].filter(s => s !== "λ");
-        
-        const conjuntoASet = new Set(conjA_elementos);
-        const conjuntoBSet = new Set(conjB_elementos);
+        const conjA_elems = Array.from(conjuntoA.value).filter(s => s !== 'λ');
+        const conjB_elems = Array.from(conjuntoB.value).filter(s => s !== 'λ');
         
         // A - B
-        const diferenciaAB = [...conjuntoASet].filter(simbolo => !conjuntoBSet.has(simbolo));
+        const diferenciaAB = conjA_elems.filter(simbolo => !conjB_elems.includes(simbolo));
         
         // B - A
-        const diferenciaBA = [...conjuntoBSet].filter(simbolo => !conjuntoASet.has(simbolo));
+        const diferenciaBA = conjB_elems.filter(simbolo => !conjA_elems.includes(simbolo));
         
-        resultadoA.value = diferenciaAB.length ? diferenciaAB.sort() : ["λ"];
-        resultadoB.value = diferenciaBA.length ? diferenciaBA.sort() : ["λ"];
+        resultadoA.value = diferenciaAB.length ? diferenciaAB.sort() : ['λ'];
+        resultadoB.value = diferenciaBA.length ? diferenciaBA.sort() : ['λ'];
         break;
         
       case 'diferencia_simetrica':
-        if (conjuntosSeleccionados.value.length < 2) {
-          error.value = "Se necesitan al menos dos conjuntos para la diferencia simétrica.";
-          return;
-        }
+        const conjuntoAElems = new Set(Array.from(conjuntoA.value).filter(s => s !== 'λ'));
+        const conjuntoBElems = new Set(Array.from(conjuntoB.value).filter(s => s !== 'λ'));
         
-        const conjuntos = conjuntosSeleccionados.value.map(nombre => 
-          new Set(alfabetos[nombre].filter(s => s !== "λ"))
+        // Unión
+        const unionTotal = new Set();
+        conjuntoAElems.forEach(simbolo => unionTotal.add(simbolo));
+        conjuntoBElems.forEach(simbolo => unionTotal.add(simbolo));
+        
+        // Intersección
+        const interseccionTotal = Array.from(conjuntoAElems).filter(simbolo => 
+          conjuntoBElems.has(simbolo)
         );
         
-        // Unión de todos los conjuntos
-        const unionTotal = new Set<string>();
-        conjuntos.forEach(conj => conj.forEach(simbolo => unionTotal.add(simbolo)));
+        // Diferencia simétrica (elementos en la unión pero no en la intersección)
+        const diferenciaSimetrica = Array.from(unionTotal).filter(simbolo => 
+          !interseccionTotal.includes(simbolo)
+        );
         
-        // Intersección de todos los conjuntos
-        let interseccionTotal: string[] = [];
-        if (conjuntos[0].size) {
-          interseccionTotal = [...conjuntos[0]];
-          for (let i = 1; i < conjuntos.length; i++) {
-            interseccionTotal = interseccionTotal.filter(simbolo => conjuntos[i].has(simbolo));
-          }
-        }
-        
-        // Diferencia simétrica
-        const diferenciaSimetrica = [...unionTotal].filter(simbolo => !interseccionTotal.includes(simbolo));
-        resultadoA.value = diferenciaSimetrica.length ? diferenciaSimetrica.sort() : ["λ"];
+        resultadoA.value = diferenciaSimetrica.length ? diferenciaSimetrica.sort() : ['λ'];
         break;
     }
   } catch (e) {
