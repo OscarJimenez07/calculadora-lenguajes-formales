@@ -47,8 +47,8 @@
     <div v-if="resultadoA.length > 0 || resultadoB.length > 0">
       <h3>Resultado:</h3>
       <div v-if="operacionActiva === 'pertenencia'">
-        <div>Elementos que pertenecen: {{ mostrarConjunto(resultadoA) }}</div>
-        <div>Elementos que no pertenecen: {{ mostrarConjunto(resultadoB) }}</div>
+        <div>Elementos que pertenecen a ambos conjuntos: {{ mostrarConjunto(resultadoA) }}</div>
+        <div>Elementos que pertenecen a B pero NO pertenecena a A: {{ mostrarConjunto(resultadoB) }}</div>
       </div>
       <div v-else-if="operacionActiva === 'diferencia_absoluta'">
         <div>Diferencia Absoluta A-B: {{ mostrarConjunto(resultadoA) }}</div>
