@@ -44,18 +44,43 @@
     </div>
 
     <!-- Resultado -->
-    <div v-if="resultadoA.length > 0 || resultadoB.length > 0">
+    <div v-if="resultadoA.length > 0 || resultadoB.length > 0 || operacionActiva === 'complemento'">
       <h3>Resultado:</h3>
-      <div v-if="operacionActiva === 'pertenencia'">
-        <div>Elementos que pertenecen a ambos conjuntos: {{ mostrarConjunto(resultadoA) }}</div>
-        <div>Elementos que pertenecen a B pero NO pertenecena a A: {{ mostrarConjunto(resultadoB) }}</div>
+
+      <!-- Solo muestra el resultado si se ha ejecutado la operación -->
+      <div v-if="operacionEjecutada">
+        <h3>Resultado:</h3>
+
+        <!-- Mostrar λ solo si ambos conjuntos están vacíos -->
+        <div v-if="resultadoA.length === 0 && resultadoB.length === 0">
+          <div>λ</div>
+        </div>
+
+        <!-- Si hay resultados en A o B, mostrarlos -->
+        <div v-else>
+          <div v-if="resultadoA.length > 0">Resultado A: {{ mostrarConjunto(resultadoA) }}</div>
+          <div v-if="resultadoB.length > 0">Resultado B: {{ mostrarConjunto(resultadoB) }}</div>
+        </div>
       </div>
+
+      <div v-else-if="operacionActiva === 'pertenencia'">
+        <div>Elementos que pertenecen a ambos conjuntos: {{ mostrarConjunto(resultadoA) }}</div>
+        <div>Elementos que no pertenecen al conjunto A: {{ mostrarConjunto(resultadoC) }}</div>
+        <div>Elementos que no pertenecen al conjunto B: {{ mostrarConjunto(resultadoB) }}</div>
+      </div>
+
       <div v-else-if="operacionActiva === 'diferencia_absoluta'">
         <div>Diferencia Absoluta A-B: {{ mostrarConjunto(resultadoA) }}</div>
         <div>Diferencia Absoluta B-A: {{ mostrarConjunto(resultadoB) }}</div>
       </div>
+
+      <div v-else-if="operacionActiva === 'complemento'">
+        <div>Complemento de A en B: {{ mostrarConjunto(resultadoA) }}</div>
+        <div>Complemento de B en A: {{ mostrarConjunto(resultadoB) }}</div>
+      </div>
+
       <div v-else>
-        <div>{{ mostrarConjunto(resultadoA) }}</div>
+        <div>{{ resultadoA.length > 0 ? mostrarConjunto(resultadoA) : '' }}</div>
       </div>
     </div>
     
@@ -87,8 +112,10 @@ const conjuntoB = ref(new Set(['λ']));
 
 // Variables reactivas para operaciones
 const operacionActiva = ref('pertenencia');
+const operacionEjecutada = ref(false);
 const resultadoA = ref([]);
 const resultadoB = ref([]);
+const resultadoC = ref([]);
 const error = ref('');
 
 // Funciones para gestionar los conjuntos
@@ -148,17 +175,23 @@ const ejecutarOperacion = () => {
     switch (operacionActiva.value) {
       case 'pertenencia':
         // Calcular elementos que pertenecen (intersección)
-        const pertenecen = Array.from(conjuntoB.value).filter(elem => 
-          elem !== 'λ' && conjuntoA.value.has(elem)
+        const pertenecenAmbos = Array.from(conjuntoA.value).filter(elem => 
+          elem !== 'λ' && conjuntoB.value.has(elem)
         );
         
-        // Calcular elementos que no pertenecen (diferencia)
-        const noPertenecen = Array.from(conjuntoB.value).filter(elem => 
+        // Elementos que están en A pero no en B
+        const noPertenecenB = Array.from(conjuntoA.value).filter(elem => 
+          elem !== 'λ' && !conjuntoB.value.has(elem)
+        );
+
+        // Elementos que están en B pero no en A
+        const noPertenecenA = Array.from(conjuntoB.value).filter(elem => 
           elem !== 'λ' && !conjuntoA.value.has(elem)
         );
         
-        resultadoA.value = pertenecen.length ? pertenecen.sort() : ['λ'];
-        resultadoB.value = noPertenecen.length ? noPertenecen.sort() : ['λ'];
+        resultadoA.value = pertenecenAmbos.length ? pertenecenAmbos.sort() : ['λ'];
+        resultadoB.value = noPertenecenB.length ? noPertenecenB.sort() : ['λ'];
+        resultadoC.value = noPertenecenA.length ? noPertenecenA.sort() : ['λ'];
         break;
         
       case 'union':
@@ -185,14 +218,26 @@ const ejecutarOperacion = () => {
         break;
         
       case 'complemento':
-        // En este caso, B es el universo
-        const conjunto = new Set(Array.from(conjuntoA.value).filter(s => s !== 'λ'));
-        const universo = new Set(Array.from(conjuntoB.value).filter(s => s !== 'λ'));
-        
-        const complemento = Array.from(universo).filter(simbolo => !conjunto.has(simbolo));
-        resultadoA.value = complemento.length ? complemento.sort() : ['λ'];
+        console.log("Calculando complemento:");
+
+        const conjuntoAArray = conjuntoAInput.value.split(',').map(s => s.trim()).filter(Boolean);
+        const conjuntoBArray = conjuntoBInput.value.split(',').map(s => s.trim()).filter(Boolean);
+
+        const conjuntoASet = new Set(conjuntoAArray);
+        const conjuntoBSet = new Set(conjuntoBArray);
+
+        const complementoA = [...conjuntoBSet].filter(simbolo => !conjuntoASet.has(simbolo));
+        const complementoB = [...conjuntoASet].filter(simbolo => !conjuntoBSet.has(simbolo));
+
+        // Solo asignar 'λ' cuando ambos estén vacíos
+        resultadoA.value = complementoA.length > 0 ? complementoA : [];
+        resultadoB.value = complementoB.length > 0 ? complementoB : [];
+
+        console.log("Complemento de A en B:", resultadoA.value);
+        console.log("Complemento de B en A:", resultadoB.value);
         break;
-        
+
+ 
       case 'diferencia_absoluta':
         const conjA_elems = Array.from(conjuntoA.value).filter(s => s !== 'λ');
         const conjB_elems = Array.from(conjuntoB.value).filter(s => s !== 'λ');
@@ -230,7 +275,7 @@ const ejecutarOperacion = () => {
         break;
     }
   } catch (e) {
-    error.value = `Error en la operación: ${e}`;
+    error.value = Error en la operación: ${e};
   }
 };
 </script>
