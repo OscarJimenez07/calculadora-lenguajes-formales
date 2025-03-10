@@ -275,7 +275,7 @@ const ejecutarOperacion = () => {
         break;
     }
   } catch (e) {
-    error.value = Error en la operación: ${e};
+    error.value = `Error en la operación: ${e}`;
   }
 };
 </script>
