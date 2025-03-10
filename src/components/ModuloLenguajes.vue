@@ -244,9 +244,11 @@ class OperacionesDeLenguaje {
   }
 
   union(L1: Set<string>, L2: Set<string>): string {
-    const resultado = new Set<string>([...L1, ...L2]);
-    return `La unión de los conjuntos es {${Array.from(resultado).sort().join(', ')}}`;
-  }
+  if (L1.size === 1 && L1.has("λ")) L1 = new Set();
+  if (L2.size === 1 && L2.has("λ")) L2 = new Set();
+  const resultado = new Set<string>([...L1, ...L2]);
+  return `La unión de los conjuntos es {${Array.from(resultado).sort().join(', ')}}`;
+}
 
   interseccion(L1: Set<string>, L2: Set<string>): string {
     const resultado = new Set<string>();
@@ -255,8 +257,13 @@ class OperacionesDeLenguaje {
         resultado.add(elem);
       }
     });
-    
-    return `La intersección de los conjuntos es {${Array.from(resultado).sort().join(', ')}}`;
+
+    if (resultado.size === 0) {
+        return `La intersección de los conjuntos es {${this.landa}}`;
+    } else {
+        return `La intersección de los conjuntos es {${Array.from(resultado).sort().join(', ')}}`;
+    }
+
   }
 
   sustraccion(L1: Set<string>, L2: Set<string>): string {
@@ -266,8 +273,11 @@ class OperacionesDeLenguaje {
         resultado.add(elem);
       }
     });
-    
-    return `La sustracción de los conjuntos es {${Array.from(resultado).sort().join(', ')}}`;
+    if (resultado.size === 0) {
+      return `La sustracción de los conjuntos es {${this.landa}}`;
+    } else {
+      return `La sustracción de los conjuntos es {${Array.from(resultado).sort().join(', ')}}`;
+    }
   }
 
   cierreKleene(L: Set<string>, maxDepth: number): string {

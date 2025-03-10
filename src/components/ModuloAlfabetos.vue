@@ -44,7 +44,7 @@
     </div>
 
     <!-- Resultado -->
-    <div v-if="resultadoA.length > 0 || resultadoB.length > 0 || operacionActiva === 'complemento'">
+    <div v-if="resultadoA.length > 0 || resultadoB.length > 0">
       <h3>Resultado:</h3>
 
       <!-- Solo muestra el resultado si se ha ejecutado la operación -->
@@ -230,12 +230,12 @@ const ejecutarOperacion = () => {
         const complementoB = [...conjuntoASet].filter(simbolo => !conjuntoBSet.has(simbolo));
 
         // Solo asignar 'λ' cuando ambos estén vacíos
-        resultadoA.value = complementoA.length > 0 ? complementoA : [];
-        resultadoB.value = complementoB.length > 0 ? complementoB : [];
+        resultadoA.value = complementoA.length > 0 ? complementoA : ['λ'];
+        resultadoB.value = complementoB.length > 0 ? complementoB : ['λ'];
 
         console.log("Complemento de A en B:", resultadoA.value);
         console.log("Complemento de B en A:", resultadoB.value);
-        break;
+        break;   
 
  
       case 'diferencia_absoluta':
