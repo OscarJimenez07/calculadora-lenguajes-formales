@@ -277,5 +277,6 @@ const ejecutarOperacion = () => {
   } catch (e) {
     error.value = Error en la operación: ${e};
   }
+  
 };
 </script>
