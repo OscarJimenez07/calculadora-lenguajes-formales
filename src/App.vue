@@ -23,6 +23,14 @@ import AlfabetosModule from './components/ModuloAlfabetos.vue';
 import CadenasModule from './components/ModuloCadenas.vue';
 import LenguajesModule from './components/ModuloLenguajes.vue';
 
+// Declarar los tipos para particlesJS
+declare global {
+  interface Window {
+    particlesJS: any;
+    pJSDom: any[];
+  }
+}
+
 interface MenuItem {
   id: string;
   name: string;
@@ -57,7 +65,7 @@ const loadParticles = () => {
 
 // Función para inicializar partículas con interacción "push"
 const initParticles = () => {
-  particlesJS('particles-js', {
+  window.particlesJS('particles-js', {
     particles: {
       number: { value: 80, density: { enable: true, value_area: 800 } },
       color: { value: "#ffffff" },
@@ -87,11 +95,8 @@ const initParticles = () => {
     if (particles && particles.length > 80) { 
       particles.splice(0, particles.length - 80); // Elimina las más antiguas
     }
-  }, 5000); // Se limpia cada 5 segundos
+  }, 10000); // Se limpia cada 10 segundos
 };
-
-loadParticles();
-
 </script>
 
 <style>
